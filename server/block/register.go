@@ -9,7 +9,6 @@ import (
 
 // init registers all blocks implemented by Dragonfly.
 func init() {
-	world.RegisterBlock(PressurePlate{})
 	world.RegisterBlock(Air{})
 	world.RegisterBlock(Amethyst{})
 	world.RegisterBlock(AncientDebris{})
@@ -126,6 +125,7 @@ func init() {
 	registerAll(allBlackstone())
 	registerAll(allBlastFurnaces())
 	registerAll(allBoneBlock())
+	registerAll(allPressurePlates())
 	registerAll(allButtons())
 	registerAll(allCactus())
 	registerAll(allCake())
