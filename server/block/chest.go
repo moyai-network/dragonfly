@@ -111,7 +111,7 @@ func (c Chest) RemoveViewer(v ContainerViewer, w *world.World, pos cube.Pos) {
 // Activate ...
 func (c Chest) Activate(pos cube.Pos, _ cube.Face, w *world.World, u item.User, _ *item.UseContext) bool {
 	if opener, ok := u.(ContainerOpener); ok {
-		if d, ok := w.Block(pos.Side(cube.FaceUp)).(LightDiffuser); ok && d.LightDiffusionLevel() == 0 {
+		if d, ok := w.Block(pos.Side(cube.FaceUp)).(LightDiffuser); ok && d.LightDiffusionLevel() <= 2 {
 			opener.OpenBlockContainer(pos)
 		}
 		return true
@@ -184,7 +184,7 @@ func (Chest) EncodeItem() (name string, meta int16) {
 
 // EncodeBlock ...
 func (c Chest) EncodeBlock() (name string, properties map[string]any) {
-	return "minecraft:chest", map[string]any{"facing_direction": 2 + int32(c.Facing)}
+	return "minecraft:chest", map[string]any{"minecraft:cardinal_direction": c.Facing.String()}
 }
 
 // allChests ...

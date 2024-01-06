@@ -1,13 +1,11 @@
 package entity
 
 import (
-	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/internal/nbtconv"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
-	"math"
 	"time"
 )
 
@@ -164,23 +162,27 @@ func (it *Item) collect(w *world.World, collector Collector, pos mgl64.Vec3) {
 	w.AddEntity(NewItem(it.i.Grow(-n), pos))
 
 	_ = it.Close()
+
+// NewItem creates a new item entity using the item stack passed. The item
+// entity will be positioned at the position passed. If the stack's count
+// exceeds its max count, the count of the stack will be changed to the
+// maximum.
+func NewItem(i item.Stack, pos mgl64.Vec3) *Ent {
+	return Config{Behaviour: itemConf.New(i)}.New(ItemType{}, pos)
 }
 
-// Explode ...
-func (it *Item) Explode(mgl64.Vec3, float64, block.ExplosionConfig) {
-	_ = it.Close()
+// NewItemPickupDelay creates a new item entity containing item stack i. A
+// delay may be specified which defines for how long the item stack cannot be
+// picked up from the ground.
+func NewItemPickupDelay(i item.Stack, pos mgl64.Vec3, delay time.Duration) *Ent {
+	config := itemConf
+	config.PickupDelay = delay
+	return Config{Behaviour: config.New(i)}.New(ItemType{}, pos)
 }
 
-// Collector represents an entity in the world that is able to collect an item, typically an entity such as
-// a player or a zombie.
-type Collector interface {
-	world.Entity
-	// Collect collects the stack passed. It is called if the Collector is standing near an item entity that
-	// may be picked up.
-	// The count of items collected from the stack n is returned.
-	Collect(stack item.Stack) (n int)
-	// GameMode returns the gamemode of the collector.
-	GameMode() world.GameMode
+var itemConf = ItemBehaviourConfig{
+	Gravity: 0.04,
+	Drag:    0.02,
 }
 
 // ItemType is a world.EntityType implementation for Item.
@@ -199,19 +201,20 @@ func (ItemType) DecodeNBT(m map[string]any) world.Entity {
 	}
 	n := NewItem(i, nbtconv.Vec3(m, "Pos"))
 	n.SetVelocity(nbtconv.Vec3(m, "Motion"))
-	n.age = int(nbtconv.Int16(m, "Age"))
-	n.pickupDelay = int(nbtconv.Int64(m, "PickupDelay"))
+	n.age = time.Duration(nbtconv.Int16(m, "Age")) * (time.Second / 20)
+	n.Behaviour().(*ItemBehaviour).pickupDelay = time.Duration(nbtconv.Int64(m, "PickupDelay")) * (time.Second / 20)
 	return n
 }
 
 func (ItemType) EncodeNBT(e world.Entity) map[string]any {
-	it := e.(*Item)
+	it := e.(*Ent)
+	b := it.Behaviour().(*ItemBehaviour)
 	return map[string]any{
 		"Health":      int16(5),
-		"Age":         int16(it.age),
-		"PickupDelay": int64(it.pickupDelay),
+		"Age":         int16(it.Age() / (time.Second * 20)),
+		"PickupDelay": int64(b.pickupDelay / (time.Second * 20)),
 		"Pos":         nbtconv.Vec3ToFloat32Slice(it.Position()),
 		"Motion":      nbtconv.Vec3ToFloat32Slice(it.Velocity()),
-		"Item":        nbtconv.WriteItem(it.Item(), true),
+		"Item":        nbtconv.WriteItem(b.Item(), true),
 	}
 }

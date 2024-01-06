@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/item/enchantment"
 	"github.com/df-mc/dragonfly/server/item/potion"
@@ -46,10 +47,10 @@ var conf = world.EntityRegistryConfig{
 		b.vel = vel
 		return b
 	},
-	Arrow: func(pos, vel mgl64.Vec3, yaw, pitch, damage float64, owner world.Entity, critical, disallowPickup, obtainArrowOnPickup bool, punchLevel int, tip any) world.Entity {
-		a := NewTippedArrowWithDamage(pos, yaw, pitch, damage, owner, tip.(potion.Potion))
+	Arrow: func(pos, vel mgl64.Vec3, rot cube.Rotation, damage float64, owner world.Entity, critical, disallowPickup, obtainArrowOnPickup bool, punchLevel int, tip any) world.Entity {
+		a := NewTippedArrowWithDamage(pos, rot, damage, owner, tip.(potion.Potion))
 		b := a.conf.Behaviour.(*ProjectileBehaviour)
-		b.conf.KnockBackAddend = float64(punchLevel) * (enchantment.Punch{}).KnockBackMultiplier()
+		b.conf.KnockBackForceAddend = float64(punchLevel) * (enchantment.Punch{}).KnockBackMultiplier()
 		b.conf.DisablePickup = disallowPickup
 		if obtainArrowOnPickup {
 			b.conf.PickupItem = item.NewStack(item.Arrow{Tip: tip.(potion.Potion)}, 1)
@@ -68,11 +69,8 @@ var conf = world.EntityRegistryConfig{
 		e.vel = vel
 		return e
 	},
-	Firework: func(pos mgl64.Vec3, yaw, pitch float64, attached bool, firework world.Item, owner world.Entity) world.Entity {
-		f := NewFirework(pos, yaw, pitch, firework.(item.Firework))
-		f.owner = owner
-		f.attached = attached
-		return f
+	Firework: func(pos mgl64.Vec3, rot cube.Rotation, attached bool, firework world.Item, owner world.Entity) world.Entity {
+		return NewFireworkAttached(pos, rot, firework.(item.Firework), owner, attached)
 	},
 	LingeringPotion: func(pos, vel mgl64.Vec3, t any, owner world.Entity) world.Entity {
 		p := NewLingeringPotion(pos, owner, t.(potion.Potion))

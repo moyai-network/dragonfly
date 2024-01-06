@@ -14,29 +14,29 @@ import (
 
 // NewArrow creates a new Arrow and returns it. It is equivalent to calling NewTippedArrow with `potion.Potion{}` as
 // tip.
-func NewArrow(pos mgl64.Vec3, yaw, pitch float64, owner world.Entity) *Ent {
-	return NewTippedArrowWithDamage(pos, yaw, pitch, 2.0, owner, potion.Potion{})
+func NewArrow(pos mgl64.Vec3, rot cube.Rotation, owner world.Entity) *Ent {
+	return NewTippedArrowWithDamage(pos, rot, 2.0, owner, potion.Potion{})
 }
 
 // NewArrowWithDamage creates a new Arrow with the given base damage, and returns it. It is equivalent to calling
 // NewTippedArrowWithDamage with `potion.Potion{}` as tip.
-func NewArrowWithDamage(pos mgl64.Vec3, yaw, pitch, damage float64, owner world.Entity) *Ent {
-	return NewTippedArrowWithDamage(pos, yaw, pitch, damage, owner, potion.Potion{})
+func NewArrowWithDamage(pos mgl64.Vec3, rot cube.Rotation, damage float64, owner world.Entity) *Ent {
+	return NewTippedArrowWithDamage(pos, rot, damage, owner, potion.Potion{})
 }
 
 // NewTippedArrow creates a new Arrow with a potion effect added to an entity when hit.
-func NewTippedArrow(pos mgl64.Vec3, yaw, pitch float64, owner world.Entity, tip potion.Potion) *Ent {
-	return NewTippedArrowWithDamage(pos, yaw, pitch, 2.0, owner, tip)
+func NewTippedArrow(pos mgl64.Vec3, rot cube.Rotation, owner world.Entity, tip potion.Potion) *Ent {
+	return NewTippedArrowWithDamage(pos, rot, 2.0, owner, tip)
 }
 
 // NewTippedArrowWithDamage creates a new Arrow with a potion effect added to an entity when hit and, and returns it.
 // It uses the given damage as the base damage.
-func NewTippedArrowWithDamage(pos mgl64.Vec3, yaw, pitch, damage float64, owner world.Entity, tip potion.Potion) *Ent {
+func NewTippedArrowWithDamage(pos mgl64.Vec3, rot cube.Rotation, damage float64, owner world.Entity, tip potion.Potion) *Ent {
 	conf := arrowConf
 	conf.Damage = damage
 	conf.Potion = tip
 	a := Config{Behaviour: conf.New(owner)}.New(ArrowType{}, pos)
-	a.rot = cube.Rotation{yaw, pitch}
+	a.rot = rot
 	return a
 }
 
@@ -66,7 +66,7 @@ func (ArrowType) BBox(world.Entity) cube.BBox {
 
 func (ArrowType) DecodeNBT(m map[string]any) world.Entity {
 	pot := potion.From(nbtconv.Int32(m, "auxValue") - 1)
-	arr := NewTippedArrowWithDamage(nbtconv.Vec3(m, "Pos"), float64(nbtconv.Float32(m, "Yaw")), float64(nbtconv.Float32(m, "Pitch")), float64(nbtconv.Float32(m, "Damage")), nil, pot)
+	arr := NewTippedArrowWithDamage(nbtconv.Vec3(m, "Pos"), nbtconv.Rotation(m), float64(nbtconv.Float32(m, "Damage")), nil, pot)
 	b := arr.conf.Behaviour.(*ProjectileBehaviour)
 	arr.vel = nbtconv.Vec3(m, "Motion")
 	b.conf.DisablePickup = !nbtconv.Bool(m, "player")
@@ -74,7 +74,7 @@ func (ArrowType) DecodeNBT(m map[string]any) world.Entity {
 		b.conf.PickupItem = item.NewStack(item.Arrow{Tip: pot}, 1)
 	}
 	arr.fireDuration = time.Duration(nbtconv.Int16(m, "Fire")) * time.Second / 20
-	b.conf.KnockBackAddend = (enchantment.Punch{}).KnockBackMultiplier() * float64(nbtconv.Uint8(m, "enchantPunch"))
+	b.conf.KnockBackForceAddend = (enchantment.Punch{}).KnockBackMultiplier() * float64(nbtconv.Uint8(m, "enchantPunch"))
 	if _, ok := m["StuckToBlockPos"]; ok {
 		b.collisionPos = nbtconv.Pos(m, "StuckToBlockPos")
 		b.collided = true
@@ -93,7 +93,7 @@ func (ArrowType) EncodeNBT(e world.Entity) map[string]any {
 		"Motion":       nbtconv.Vec3ToFloat32Slice(a.Velocity()),
 		"Damage":       float32(b.conf.Damage),
 		"Fire":         int16(a.OnFireDuration() * 20),
-		"enchantPunch": byte(b.conf.KnockBackAddend / (enchantment.Punch{}).KnockBackMultiplier()),
+		"enchantPunch": byte(b.conf.KnockBackForceAddend / (enchantment.Punch{}).KnockBackMultiplier()),
 		"auxValue":     int32(b.conf.Potion.Uint8() + 1),
 		"player":       boolByte(!b.conf.DisablePickup),
 		"isCreative":   boolByte(b.conf.PickupItem.Empty()),

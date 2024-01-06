@@ -119,21 +119,22 @@ func (s *Session) ViewEntity(e world.Entity) {
 			}}})
 		}
 		return
-	case *entity.Item:
-		s.writePacket(&packet.AddItemActor{
-			EntityUniqueID:  int64(runtimeID),
-			EntityRuntimeID: runtimeID,
-			Item:            instanceFromItem(v.Item()),
-			Position:        vec64To32(v.Position()),
-			Velocity:        vec64To32(v.Velocity()),
-			EntityMetadata:  metadata,
-		})
-		return
-	case *entity.FallingBlock:
-		metadata[protocol.EntityDataKeyVariant] = int32(world.BlockRuntimeID(v.Block()))
 	case *entity.Ent:
-		if _, ok := e.Type().(entity.TextType); ok {
+		switch e.Type().(type) {
+		case entity.ItemType:
+			s.writePacket(&packet.AddItemActor{
+				EntityUniqueID:  int64(runtimeID),
+				EntityRuntimeID: runtimeID,
+				Item:            instanceFromItem(v.Behaviour().(*entity.ItemBehaviour).Item()),
+				Position:        vec64To32(v.Position()),
+				Velocity:        vec64To32(v.Velocity()),
+				EntityMetadata:  metadata,
+			})
+			return
+		case entity.TextType:
 			metadata[protocol.EntityDataKeyVariant] = int32(world.BlockRuntimeID(block.Air{}))
+		case entity.FallingBlockType:
+			metadata[protocol.EntityDataKeyVariant] = int32(world.BlockRuntimeID(v.Behaviour().(*entity.FallingBlockBehaviour).Block()))
 		}
 	}
 	if v, ok := e.Type().(NetworkEncodeableEntity); ok {
@@ -194,7 +195,7 @@ func (s *Session) HideEntity(e world.Entity) {
 }
 
 // ViewEntityMovement ...
-func (s *Session) ViewEntityMovement(e world.Entity, pos mgl64.Vec3, yaw, pitch float64, onGround bool) {
+func (s *Session) ViewEntityMovement(e world.Entity, pos mgl64.Vec3, rot cube.Rotation, onGround bool) {
 	id := s.entityRuntimeID(e)
 	if id == selfEntityRuntimeID || s.entityHidden(e) {
 		return
@@ -207,7 +208,7 @@ func (s *Session) ViewEntityMovement(e world.Entity, pos mgl64.Vec3, yaw, pitch 
 	s.writePacket(&packet.MoveActorAbsolute{
 		EntityRuntimeID: id,
 		Position:        vec64To32(pos.Add(entityOffset(e))),
-		Rotation:        vec64To32(mgl64.Vec3{pitch, yaw, yaw}),
+		Rotation:        vec64To32(mgl64.Vec3{rot.Pitch(), rot.Yaw(), rot.Yaw()}),
 		Flags:           flags,
 	})
 }
@@ -628,12 +629,18 @@ func (s *Session) playSound(pos mgl64.Vec3, t world.Sound, disableRelative bool)
 		pk.SoundType = packet.SoundEventFallSmall
 	case sound.Burp:
 		pk.SoundType = packet.SoundEventBurp
-	case sound.Door:
-		s.writePacket(&packet.LevelEvent{
-			EventType: packet.LevelEventSoundOpenDoor,
-			Position:  vec64To32(pos),
-		})
-		return
+	case sound.DoorOpen:
+		pk.SoundType, pk.ExtraData = packet.SoundEventDoorOpen, int32(world.BlockRuntimeID(so.Block))
+	case sound.DoorClose:
+		pk.SoundType, pk.ExtraData = packet.SoundEventDoorClose, int32(world.BlockRuntimeID(so.Block))
+	case sound.TrapdoorOpen:
+		pk.SoundType, pk.ExtraData = packet.SoundEventTrapdoorOpen, int32(world.BlockRuntimeID(so.Block))
+	case sound.TrapdoorClose:
+		pk.SoundType, pk.ExtraData = packet.SoundEventTrapdoorClose, int32(world.BlockRuntimeID(so.Block))
+	case sound.FenceGateOpen:
+		pk.SoundType, pk.ExtraData = packet.SoundEventFenceGateOpen, int32(world.BlockRuntimeID(so.Block))
+	case sound.FenceGateClose:
+		pk.SoundType, pk.ExtraData = packet.SoundEventFenceGateClose, int32(world.BlockRuntimeID(so.Block))
 	case sound.Deny:
 		pk.SoundType = packet.SoundEventDeny
 	case sound.BlockPlace:
@@ -737,6 +744,8 @@ func (s *Session) playSound(pos mgl64.Vec3, t world.Sound, disableRelative bool)
 			pk.SoundType = packet.SoundEventRecordPigstep
 		case sound.Disc5():
 			pk.SoundType = packet.SoundEventRecord5
+		case sound.DiscRelic():
+			pk.SoundType = packet.SoundEventRecordRelic
 		}
 	case sound.MusicDiscEnd:
 		pk.SoundType = packet.SoundEventRecordNull
@@ -766,6 +775,8 @@ func (s *Session) playSound(pos mgl64.Vec3, t world.Sound, disableRelative bool)
 		pk.SoundType = packet.SoundEventBlockClickFail
 	case sound.Dispense:
 		pk.SoundType = packet.SoundEventBlockClick
+	case sound.LecternBookPlace:
+		pk.SoundType = packet.SoundEventLecternBookPlace
 	}
 	s.writePacket(pk)
 }
@@ -782,6 +793,15 @@ func (s *Session) PlaySound(t world.Sound) {
 // ViewSound ...
 func (s *Session) ViewSound(pos mgl64.Vec3, soundType world.Sound) {
 	s.playSound(pos, soundType, false)
+}
+
+// OpenSign ...
+func (s *Session) OpenSign(pos cube.Pos, frontSide bool) {
+	blockPos := protocol.BlockPos{int32(pos[0]), int32(pos[1]), int32(pos[2])}
+	s.writePacket(&packet.OpenSign{
+		Position:  blockPos,
+		FrontSide: frontSide,
+	})
 }
 
 // ViewFurnaceUpdate updates a furnace for the associated session based on previous times.
@@ -908,6 +928,16 @@ func (s *Session) ViewEntityState(e world.Entity) {
 	s.writePacket(&packet.SetActorData{
 		EntityRuntimeID: s.entityRuntimeID(e),
 		EntityMetadata:  s.parseEntityMetadata(e),
+	})
+}
+
+// ViewEntityAnimation ...
+func (s *Session) ViewEntityAnimation(e world.Entity, animationName string) {
+	s.writePacket(&packet.AnimateEntity{
+		Animation: animationName,
+		EntityRuntimeIDs: []uint64{
+			s.entityRuntimeID(e),
+		},
 	})
 }
 
@@ -1146,6 +1176,11 @@ func vec32To64(vec3 mgl32.Vec3) mgl64.Vec3 {
 // vec64To32 converts a mgl64.Vec3 to a mgl32.Vec3.
 func vec64To32(vec3 mgl64.Vec3) mgl32.Vec3 {
 	return mgl32.Vec3{float32(vec3[0]), float32(vec3[1]), float32(vec3[2])}
+}
+
+// blockPosFromProtocol ...
+func blockPosFromProtocol(pos protocol.BlockPos) cube.Pos {
+	return cube.Pos{int(pos.X()), int(pos.Y()), int(pos.Z())}
 }
 
 // boolByte returns 1 if the bool passed is true, or 0 if it is false.

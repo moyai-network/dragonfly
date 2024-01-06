@@ -30,9 +30,12 @@ type ProjectileBehaviourConfig struct {
 	// Potion is the potion effect that is applied to an entity when the
 	// projectile hits it.
 	Potion potion.Potion
-	// KnockBackAddend is the additional velocity that is applied to an entity
-	// when it is hit by the projectile.
-	KnockBackAddend float64
+	// KnockBackForceAddend is the additional horizontal velocity that is
+	// applied to an entity when it is hit by the projectile.
+	KnockBackForceAddend float64
+	// KnockBackHeightAddend is the additional vertical velocity that is applied
+	// to an entity when it is hit by the projectile.
+	KnockBackHeightAddend float64
 	// Particle is a particle that is spawned when the projectile hits a
 	// target, either a block or an entity. No particle is spawned if left nil.
 	Particle world.Particle
@@ -89,11 +92,11 @@ func (conf ProjectileBehaviourConfig) New(owner world.Entity) *ProjectileBehavio
 // ProjectileBehaviour implements the behaviour of projectiles. Its specifics
 // may be configured using ProjectileBehaviourConfig.
 type ProjectileBehaviour struct {
-	conf             ProjectileBehaviourConfig
-	owner            world.Entity
-	mc               *MovementComputer
-	age, ageCollided int
-	close            bool
+	conf        ProjectileBehaviourConfig
+	owner       world.Entity
+	mc          *MovementComputer
+	ageCollided int
+	close       bool
 
 	collisionPos cube.Pos
 	collided     bool
@@ -118,9 +121,7 @@ func (lt *ProjectileBehaviour) Potion() potion.Potion {
 
 // Critical returns true if ProjectileBehaviourConfig.Critical was set to true
 // and if the projectile has not collided.
-func (lt *ProjectileBehaviour) Critical(e *Ent) bool {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+func (lt *ProjectileBehaviour) Critical() bool {
 	return lt.conf.Critical && !lt.collided
 }
 
@@ -267,7 +268,7 @@ func (lt *ProjectileBehaviour) hitEntity(l Living, e *Ent, origin, vel mgl64.Vec
 		dmg += rand.Float64() * dmg / 2
 	}
 	if _, vulnerable := l.Hurt(lt.conf.Damage, src); vulnerable {
-		l.KnockBack(origin, 0.45+lt.conf.KnockBackAddend, 0.3608)
+		l.KnockBack(origin, 0.45+lt.conf.KnockBackForceAddend, 0.3608+lt.conf.KnockBackHeightAddend)
 
 		for _, eff := range lt.conf.Potion.Effects() {
 			l.AddEffect(eff)
@@ -316,8 +317,6 @@ func (lt *ProjectileBehaviour) tickMovement(e *Ent) (*Movement, trace.Result) {
 			end = hit.Position()
 		}
 	}
-	lt.age++
-
 	return &Movement{v: viewers, e: e, pos: end, vel: vel, dpos: end.Sub(pos), dvel: vel.Sub(velBefore), rot: rot}, hit
 }
 
@@ -328,6 +327,6 @@ func (lt *ProjectileBehaviour) ignores(e *Ent) func(other world.Entity) bool {
 	return func(other world.Entity) (ignored bool) {
 		g, ok := other.(interface{ GameMode() world.GameMode })
 		_, living := other.(Living)
-		return (ok && !g.GameMode().HasCollision()) || e == other || !living || (lt.age < 5 && lt.owner == other)
+		return (ok && !g.GameMode().HasCollision()) || e == other || !living || (e.age < time.Second/4 && lt.owner == other)
 	}
 }

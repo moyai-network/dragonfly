@@ -2,6 +2,7 @@ package block
 
 import (
 	"github.com/df-mc/dragonfly/server/block/cube"
+	"github.com/df-mc/dragonfly/server/block/customblock"
 	"github.com/df-mc/dragonfly/server/block/model"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
@@ -73,7 +74,7 @@ type EntityInsider interface {
 	EntityInside(pos cube.Pos, w *world.World, e world.Entity)
 }
 
-// Frictional represents a block that may have a custom friction value, friction is used for entity drag when the
+// Frictional represents a block that may have a custom friction value. Friction is used for entity drag when the
 // entity is on ground. If a block does not implement this interface, it should be assumed that its friction is 0.6.
 type Frictional interface {
 	// Friction returns the block's friction value.
@@ -84,6 +85,18 @@ type Frictional interface {
 var unknownFace = cube.Face(len(cube.Faces()))
 
 func calculateAnySidedFace(user item.User, placePos cube.Pos, swapHorizontal bool) cube.Face {
+// Permutable represents a custom block that can have more permutations than its default state.
+type Permutable interface {
+	// States returns a map of all the different properties for the block. The key is the property name, and the value
+	// is a slice of all the possible values for that property. It is important that a block is registered in dragonfly
+	// for each of the possible combinations of properties and values.
+	States() map[string][]any
+	// Permutations returns a slice of all the different permutations for the block. Multiple permutations can be
+	// applied at once if their conditions are met.
+	Permutations() []customblock.Permutation
+}
+
+func calculateFace(user item.User, placePos cube.Pos) cube.Face {
 	userPos := user.Position()
 	pos := cube.PosFromVec3(userPos)
 	if abs(pos[0]-placePos[0]) < 2 && abs(pos[2]-placePos[2]) < 2 {

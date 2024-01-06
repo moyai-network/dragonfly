@@ -4,8 +4,8 @@ import (
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/internal/sliceutil"
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"math/rand"
+	"slices"
 	"time"
 )
 
@@ -154,7 +154,7 @@ func (t ticker) tickBlocksRandomly(loaders []*Loader, tick int64) {
 			continue
 		}
 		c.Lock()
-		blockEntities = append(blockEntities, maps.Keys(c.e)...)
+		blockEntities = append(blockEntities, maps.Keys(c.BlockEntities)...)
 
 		cx, cz := int(pos[0]<<4), int(pos[1]<<4)
 
@@ -214,7 +214,7 @@ func (t ticker) anyWithinDistance(pos ChunkPos, loaded []ChunkPos, r int32) bool
 func (t ticker) tickEntities(tick int64) {
 	type entityToMove struct {
 		e             Entity
-		after         *chunkData
+		after         *Column
 		viewersBefore []Viewer
 	}
 	var (
@@ -233,7 +233,7 @@ func (t ticker) tickEntities(tick int64) {
 		}
 
 		c.Lock()
-		v := len(c.v)
+		v := len(c.viewers)
 		c.Unlock()
 
 		if v > 0 {
@@ -253,8 +253,8 @@ func (t ticker) tickEntities(tick int64) {
 			// the loaders from the old chunk. We can assume they never saw the entity in the first place.
 			if old, ok := t.w.chunks[lastPos]; ok {
 				old.Lock()
-				old.entities = sliceutil.DeleteVal(old.entities, e)
-				viewers = slices.Clone(old.v)
+				old.Entities = sliceutil.DeleteVal(old.Entities, e)
+				viewers = slices.Clone(old.viewers)
 				old.Unlock()
 			}
 			entitiesToMove = append(entitiesToMove, entityToMove{e: e, viewersBefore: viewers, after: c})
@@ -265,8 +265,8 @@ func (t ticker) tickEntities(tick int64) {
 
 	for _, move := range entitiesToMove {
 		move.after.Lock()
-		move.after.entities = append(move.after.entities, move.e)
-		viewersAfter := move.after.v
+		move.after.Entities = append(move.after.Entities, move.e)
+		viewersAfter := move.after.viewers
 		move.after.Unlock()
 
 		for _, viewer := range move.viewersBefore {

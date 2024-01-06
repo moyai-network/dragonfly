@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"github.com/df-mc/dragonfly/server/world"
 	"math"
 	"time"
 )
@@ -10,8 +11,15 @@ import (
 // to create a new behaviour with this config.
 type StationaryBehaviourConfig struct {
 	// ExistenceDuration is the duration that an entity with this behaviour
-	// should last. Once this time expires, the entity is closed.
+	// should last. Once this time expires, the entity is closed. If
+	// ExistenceDuration is 0, the entity will never expire automatically.
 	ExistenceDuration time.Duration
+	// SpawnSounds is a slice of sounds to be played upon the spawning of the
+	// entity.
+	SpawnSounds []world.Sound
+	// Tick is a function called every world tick. It may be used to implement
+	// additional behaviour for stationary entities.
+	Tick func(e *Ent)
 }
 
 // New creates a StationaryBehaviour using the settings provided in conf.
@@ -39,11 +47,19 @@ func (s *StationaryBehaviour) Tick(e *Ent) *Movement {
 		return nil
 	}
 
-	s.age += time.Second / 20
-	if s.age > s.conf.ExistenceDuration {
+	if e.Age() == 0 {
+		for _, ss := range s.conf.SpawnSounds {
+			e.World().PlaySound(e.Position(), ss)
+		}
+	}
+	if s.conf.Tick != nil {
+		s.conf.Tick(e)
+	}
+
+	if e.Age() > s.conf.ExistenceDuration {
 		s.close = true
 	}
-	// Stationary entities never mode. Always return nil here.
+	// Stationary entities never move. Always return nil here.
 	return nil
 }
 

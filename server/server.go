@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/df-mc/atomic"
 	"github.com/df-mc/dragonfly/server/cmd"
+	"github.com/df-mc/dragonfly/server/internal/blockinternal"
 	"github.com/df-mc/dragonfly/server/internal/iteminternal"
 	"github.com/df-mc/dragonfly/server/internal/sliceutil"
 	_ "github.com/df-mc/dragonfly/server/item" // Imported for maintaining correct initialisation order.
@@ -26,7 +27,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
-	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -34,7 +34,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 )
 
 // Server implements a Dragonfly server. It runs the main server loop and
@@ -47,7 +46,8 @@ type Server struct {
 
 	world, nether, end *world.World
 
-	customItems []protocol.ItemComponentEntry
+	customBlocks []protocol.BlockEntry
+	customItems  []protocol.ItemComponentEntry
 
 	listeners []Listener
 	incoming  chan *session.Session
@@ -273,6 +273,7 @@ func (srv *Server) listen(l Listener) {
 // startListening starts making the EncodeBlock listener listen, accepting new
 // connections from players.
 func (srv *Server) startListening() {
+	srv.makeBlockEntries()
 	srv.makeItemComponents()
 
 	srv.wg.Add(len(srv.conf.Listeners))
@@ -283,6 +284,21 @@ func (srv *Server) startListening() {
 		}
 		srv.listeners = append(srv.listeners, l)
 		go srv.listen(l)
+	}
+}
+
+// makeBlockEntries initializes the server's block components map using the registered custom blocks. It allows block
+// components to be created only once at startup.
+func (srv *Server) makeBlockEntries() {
+	custom := maps.Values(world.CustomBlocks())
+	srv.customBlocks = make([]protocol.BlockEntry, len(custom))
+
+	for i, b := range custom {
+		name, _ := b.EncodeBlock()
+		srv.customBlocks[i] = protocol.BlockEntry{
+			Name:       name,
+			Properties: blockinternal.Components(name, b),
+		}
 	}
 }
 
@@ -321,7 +337,8 @@ func (srv *Server) finaliseConn(ctx context.Context, conn session.Conn, l Listen
 			d.World = srv.world
 		}
 		data.PlayerPosition = vec64To32(d.Position).Add(mgl32.Vec3{0, 1.62})
-		data.Dimension = int32(d.World.Dimension().EncodeDimension())
+		dim, _ := world.DimensionID(d.World.Dimension())
+		data.Dimension = int32(dim)
 		data.Yaw, data.Pitch = float32(d.Yaw), float32(d.Pitch)
 
 		playerData = &d
@@ -359,8 +376,9 @@ func (srv *Server) defaultGameData() minecraft.GameData {
 		PlayerPermissions: packet.PermissionLevelMember,
 		PlayerPosition:    vec64To32(srv.world.Spawn().Vec3Centre().Add(mgl64.Vec3{0, 1.62})),
 
-		Items:     srv.itemEntries(),
-		GameRules: []protocol.GameRule{{Name: "naturalregeneration", Value: false}},
+		Items:        srv.itemEntries(),
+		CustomBlocks: srv.customBlocks,
+		GameRules:    []protocol.GameRule{{Name: "naturalregeneration", Value: false}},
 
 		ServerAuthoritativeInventory: true,
 		PlayerMovementSettings: protocol.PlayerMovementSettings{
@@ -473,21 +491,17 @@ func (srv *Server) createWorld(dim world.Dimension, nether, end **world.World) *
 func (srv *Server) parseSkin(data login.ClientData) skin.Skin {
 	// Gophertunnel guarantees the following values are valid data and are of
 	// the correct size.
-	skinData, _ := base64.StdEncoding.DecodeString(data.SkinData)
-	capeData, _ := base64.StdEncoding.DecodeString(data.CapeData)
-	modelData, _ := base64.StdEncoding.DecodeString(data.SkinGeometry)
 	skinResourcePatch, _ := base64.StdEncoding.DecodeString(data.SkinResourcePatch)
-	modelConfig, _ := skin.DecodeModelConfig(skinResourcePatch)
 
 	playerSkin := skin.New(data.SkinImageWidth, data.SkinImageHeight)
 	playerSkin.Persona = data.PersonaSkin
-	playerSkin.Pix = skinData
-	playerSkin.Model = modelData
-	playerSkin.ModelConfig = modelConfig
+	playerSkin.Pix, _ = base64.StdEncoding.DecodeString(data.SkinData)
+	playerSkin.Model, _ = base64.StdEncoding.DecodeString(data.SkinGeometry)
+	playerSkin.ModelConfig, _ = skin.DecodeModelConfig(skinResourcePatch)
 	playerSkin.PlayFabID = data.PlayFabID
 
 	playerSkin.Cape = skin.NewCape(data.CapeImageWidth, data.CapeImageHeight)
-	playerSkin.Cape.Pix = capeData
+	playerSkin.Cape.Pix, _ = base64.StdEncoding.DecodeString(data.CapeData)
 
 	for _, animation := range data.AnimatedImageData {
 		var t skin.AnimationType
@@ -592,8 +606,5 @@ var (
 // values in the runtime ID maps. init also seeds the global `rand` with the
 // current time.
 func init() {
-	// Seeding the random for things like lightning that need to use RNG.
-	rand.Seed(time.Now().UnixNano())
-
 	_ = nbt.Unmarshal(itemRuntimeIDData, &itemRuntimeIDs)
 }

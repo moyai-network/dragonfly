@@ -105,7 +105,7 @@ func (d WoodDoor) UseOnBlock(pos cube.Pos, face cube.Face, _ mgl64.Vec3, w *worl
 	ctx.IgnoreBBox = true
 	place(w, pos, d, user, ctx)
 	place(w, pos.Side(cube.FaceUp), WoodDoor{Wood: d.Wood, Facing: d.Facing, Top: true, Right: d.Right}, user, ctx)
-	ctx.CountSub = 1
+	ctx.SubtractFromCount(1)
 	return placed(ctx)
 }
 
@@ -120,8 +120,11 @@ func (d WoodDoor) Activate(pos cube.Pos, _ cube.Face, w *world.World, _ item.Use
 		door.Open = d.Open
 		w.SetBlock(otherPos, door, nil)
 	}
-
-	w.PlaySound(pos.Vec3Centre(), sound.Door{})
+	if d.Open {
+		w.PlaySound(pos.Vec3Centre(), sound.DoorOpen{Block: d})
+		return true
+	}
+	w.PlaySound(pos.Vec3Centre(), sound.DoorClose{Block: d})
 	return true
 }
 
