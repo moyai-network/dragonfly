@@ -1,12 +1,13 @@
 package block
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
-	"math/rand"
-	"time"
 )
 
 // Observer is a block that emits a redstone signal when the block or fluid it faces experiences a change.
@@ -97,7 +98,7 @@ func (o Observer) EncodeItem() (name string, meta int16) {
 
 // EncodeBlock ...
 func (o Observer) EncodeBlock() (string, map[string]any) {
-	return "minecraft:observer", map[string]any{"facing_direction": int32(o.Facing), "powered_bit": o.Powered}
+	return "minecraft:observer", map[string]any{"facing_direction": int32(o.Facing), "minecraft:facing_direction": o.Facing.String(), "powered_bit": o.Powered}
 }
 
 // allObservers ...

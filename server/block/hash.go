@@ -185,6 +185,8 @@ const (
 	hashWoodFenceGate
 	hashWoodTrapdoor
 	hashWool
+	hashIronDoor
+	hashPressurePlate
 	hashCustomBlockBase
 )
 
@@ -1065,6 +1067,17 @@ func (w Wood) Hash() uint64 {
 func (d WoodDoor) Hash() uint64 {
 	return hashWoodDoor | uint64(d.Wood.Uint8())<<8 | uint64(d.Facing)<<12 | uint64(boolByte(d.Open))<<14 | uint64(boolByte(d.Top))<<15 | uint64(boolByte(d.Right))<<16
 }
+
+// Hash ...
+func (d IronDoor) Hash() uint64 {
+	return hashIronDoor | uint64(d.Facing)<<12 | uint64(boolByte(d.Open))<<14 | uint64(boolByte(d.Top))<<15 | uint64(boolByte(d.Right))<<16
+}
+
+// Hash ...
+func (d PressurePlate) Hash() uint64 {
+	return hashPressurePlate | uint64(boolByte(d.Powered))<<8
+}
+
 
 // Hash ...
 func (w WoodFence) Hash() uint64 {

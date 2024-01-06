@@ -9,6 +9,7 @@ import (
 
 // init registers all blocks implemented by Dragonfly.
 func init() {
+	world.RegisterBlock(PressurePlate{})
 	world.RegisterBlock(Air{})
 	world.RegisterBlock(Amethyst{})
 	world.RegisterBlock(AncientDebris{})
@@ -139,6 +140,7 @@ func init() {
 	registerAll(allCoral())
 	registerAll(allCoralBlocks())
 	registerAll(allDeepslate())
+	registerAll(allIronDoors())
 	registerAll(allDoors())
 	registerAll(allDoubleFlowers())
 	registerAll(allDoubleTallGrass())
@@ -171,7 +173,7 @@ func init() {
 	registerAll(allMuddyMangroveRoots())
 	registerAll(allNetherBricks())
 	registerAll(allNetherWart())
-	registerAll(allObservers())
+	//registerAll(allObservers())
 	registerAll(allPistonArmCollisions())
 	registerAll(allPistons())
 	registerAll(allPlanks())
@@ -327,6 +329,8 @@ func init() {
 	world.RegisterItem(RawCopper{})
 	world.RegisterItem(RawGold{})
 	world.RegisterItem(RawIron{})
+	world.RegisterItem(IronDoor{})
+	world.RegisterItem(PressurePlate{})
 	world.RegisterItem(RedstoneBlock{})
 	world.RegisterItem(RedstoneComparator{})
 	world.RegisterItem(RedstoneLamp{})

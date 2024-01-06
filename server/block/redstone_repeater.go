@@ -1,13 +1,14 @@
 package block
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/block/model"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
-	"math/rand"
-	"time"
 )
 
 // RedstoneRepeater is a block used in redstone circuits to "repeat" redstone signals back to full strength, delay
@@ -53,8 +54,8 @@ func (r RedstoneRepeater) EncodeBlock() (string, map[string]any) {
 		name = "minecraft:powered_repeater"
 	}
 	return name, map[string]any{
-		"direction":      int32(horizontalDirection(r.Facing)),
-		"repeater_delay": int32(r.Delay),
+		"minecraft:cardinal_direction": r.Facing.String(),
+		"repeater_delay":               int32(r.Delay),
 	}
 }
 
