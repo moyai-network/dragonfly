@@ -1,10 +1,10 @@
 package block
 
 import (
-	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/df-mc/dragonfly/server/block/cube"
-	"github.com/df-mc/dragonfly/server/block/model"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
@@ -12,7 +12,7 @@ import (
 
 // Lever is a non-solid block that can provide switchable redstone power.
 type PressurePlate struct {
-	//	empty
+	empty
 	transparent
 	flowingWaterDisplacer
 
@@ -20,11 +20,6 @@ type PressurePlate struct {
 	Wood   WoodType
 	// Powered is if the PressurePlate is switched on.
 	Powered bool
-}
-
-// BBox ...
-func (u PressurePlate) Model() world.BlockModel {
-	return model.Slab{}
 }
 
 // FaceSolid ...
@@ -55,8 +50,10 @@ func (l PressurePlate) StrongPower(_ cube.Pos, face cube.Face, _ *world.World, _
 
 // NeighbourUpdateTick ...
 func (l PressurePlate) NeighbourUpdateTick(pos, _ cube.Pos, w *world.World) {
-	fmt.Println("wallg")
-	updateAroundRedstone(pos, w)
+	if !l.Powered {
+		return
+	}
+	w.ScheduleBlockUpdate(pos, 0)
 }
 
 // UseOnBlock ...
@@ -71,8 +68,18 @@ func (l PressurePlate) Activate(pos cube.Pos, _ cube.Face, w *world.World, _ ite
 
 func (l PressurePlate) EntityInside(pos cube.Pos, w *world.World, e world.Entity) {
 	l.Powered = true
+	w.SetBlock(pos, l, nil)
+	w.ScheduleBlockUpdate(pos, time.Millisecond*200)
 	updateAroundRedstone(pos, w)
-	updateStrongRedstone(pos, w)
+}
+
+func (l PressurePlate) ScheduledTick(pos cube.Pos, w *world.World, _ *rand.Rand) {
+	if !l.Powered {
+		return
+	}
+	l.Powered = false
+	w.SetBlock(pos, l, nil)
+	//updateAroundRedstone(pos, w)
 }
 
 // BreakInfo ...
