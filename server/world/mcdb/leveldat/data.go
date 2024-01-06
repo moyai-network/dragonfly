@@ -135,6 +135,13 @@ type Data struct {
 	PermissionsLevel               int32          `nbt:"permissionsLevel"`
 	PlayerPermissionsLevel         int32          `nbt:"playerPermissionsLevel"`
 	IsRandomSeedAllowed            bool           `nbt:"isRandomSeedAllowed"`
+	DoLimitedCrafting              bool           `nbt:"dolimitedcrafting"`
+	EditorWorldType                int32          `nbt:"editorWorldType"`
+	PlayersSleepingPercentage      int32          `nbt:"playerssleepingpercentage"`
+	RecipesUnlock                  bool           `nbt:"recipesunlock"`
+	NaturalGeneration              bool           `nbt:"naturalgeneration"`
+	ProjectilesCanBreakBlocks      bool           `nbt:"projectilescanbreakblocks"`
+	ShowRecipeMessages             bool           `nbt:"showrecipemessages"`
 }
 
 // FillDefault fills out d with all the default level.dat values.

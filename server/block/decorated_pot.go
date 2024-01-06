@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/block/model"
+	"github.com/df-mc/dragonfly/server/internal/nbtconv"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/go-gl/mathgl/mgl64"
@@ -28,6 +29,11 @@ type DecoratedPot struct {
 // BreakInfo ...
 func (p DecoratedPot) BreakInfo() BreakInfo {
 	return newBreakInfo(0, alwaysHarvestable, nothingEffective, oneOf(p))
+}
+
+// MaxCount ...
+func (DecoratedPot) MaxCount() int {
+	return 1
 }
 
 // EncodeItem ...
@@ -76,18 +82,19 @@ func (p DecoratedPot) EncodeNBT() map[string]any {
 
 // DecodeNBT ...
 func (p DecoratedPot) DecodeNBT(data map[string]any) any {
-	sherds := data["sherds"].([]any)
 	p.Decorations = [4]PotDecoration{}
-	for i, name := range sherds {
-		it, ok := world.ItemByName(name.(string), 0)
-		if !ok {
-			panic(fmt.Errorf("unknown item %s", name))
+	if sherds := nbtconv.Slice(data, "sherds"); sherds != nil {
+		for i, name := range sherds {
+			it, ok := world.ItemByName(name.(string), 0)
+			if !ok {
+				panic(fmt.Errorf("unknown item %s", name))
+			}
+			decoration, ok := it.(PotDecoration)
+			if !ok {
+				panic(fmt.Errorf("item %s is not a pot decoration", name))
+			}
+			p.Decorations[i] = decoration
 		}
-		decoration, ok := it.(PotDecoration)
-		if !ok {
-			panic(fmt.Errorf("item %s is not a pot decoration", name))
-		}
-		p.Decorations[i] = decoration
 	}
 	return p
 }

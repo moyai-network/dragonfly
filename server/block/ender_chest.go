@@ -1,13 +1,13 @@
 package block
 
 import (
+	"github.com/df-mc/atomic"
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/df-mc/dragonfly/server/item"
 	"github.com/df-mc/dragonfly/server/item/inventory"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/df-mc/dragonfly/server/world/sound"
 	"github.com/go-gl/mathgl/mgl64"
-	"go.uber.org/atomic"
 )
 
 // enderChestOwner represents an entity that has an ender chest inventory.
@@ -123,7 +123,7 @@ func (EnderChest) EncodeItem() (name string, meta int16) {
 
 // EncodeBlock ...
 func (c EnderChest) EncodeBlock() (name string, properties map[string]interface{}) {
-	return "minecraft:ender_chest", map[string]interface{}{"facing_direction": 2 + int32(c.Facing)}
+	return "minecraft:ender_chest", map[string]any{"minecraft:cardinal_direction": c.Facing.String()}
 }
 
 // allEnderChests ...

@@ -15,9 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft/resource"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // Config contains options for starting a Minecraft server.
@@ -282,7 +282,7 @@ func loadResources(dir string) ([]*resource.Pack, error) {
 	}
 	packs := make([]*resource.Pack, len(resources))
 	for i, entry := range resources {
-		packs[i], err = resource.Compile(filepath.Join(dir, entry.Name()))
+		packs[i], err = resource.ReadPath(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("compile resource (%v): %w", entry.Name(), err)
 		}
