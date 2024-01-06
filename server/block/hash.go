@@ -836,7 +836,7 @@ func (p Potato) Hash() uint64 {
 
 // Hash ...
 func (l PressurePlate) Hash() uint64 {
-	return hashPressurePlate | uint64(boolByte(l.Wooden))<<8 | uint64(l.Wood.Uint8())<<9 | uint64(boolByte(l.Powered))<<13
+	return hashPressurePlate | uint64(boolByte(l.Powered))<<8
 }
 
 // Hash ...
