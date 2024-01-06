@@ -1,7 +1,6 @@
 package block
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -87,7 +86,6 @@ func (l PressurePlate) ScheduledTick(pos cube.Pos, w *world.World, _ *rand.Rand)
 	// 	}
 	// }
 	if len(ent) < 1 {
-		fmt.Println("NOT INSIDE")
 		l.Powered = false
 	}
 	w.SetBlock(pos, l, nil)
