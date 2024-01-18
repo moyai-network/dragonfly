@@ -1,6 +1,8 @@
 package chunk
 
 import (
+	"golang.org/x/exp/slices"
+
 	"github.com/df-mc/dragonfly/server/block/cube"
 )
 
@@ -50,6 +52,40 @@ func (chunk *Chunk) Range() cube.Range {
 // Sub returns a list of all sub chunks present in the chunk.
 func (chunk *Chunk) Sub() []*SubChunk {
 	return chunk.sub
+}
+
+// Equals returns if the chunk passed is equal to the current one
+func (chunk *Chunk) Equals(c *Chunk) bool {
+	if c.r != chunk.r {
+		return false
+	}
+
+	if c.air != chunk.air {
+		return false
+	}
+
+	if c.recalculateHeightMap != chunk.recalculateHeightMap {
+		return false
+	}
+
+	if !slices.Equal(c.heightMap, chunk.heightMap) {
+		return false
+	}
+
+	if len(c.sub) != len(chunk.sub) {
+		return false
+	}
+
+	for i := 0; i < len(c.sub); i++ {
+		c1 := c.sub[i]
+		c2 := chunk.sub[i]
+
+		if !c1.Equals(c2) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Block returns the runtime ID of the block at a given x, y and z in a chunk at the given layer. If no

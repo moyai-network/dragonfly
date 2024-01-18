@@ -1,5 +1,7 @@
 package chunk
 
+import "golang.org/x/exp/slices"
+
 // SubChunk is a cube of blocks located in a chunk. It has a size of 16x16x16 blocks and forms part of a stack
 // that forms a Chunk.
 type SubChunk struct {
@@ -18,6 +20,36 @@ func NewSubChunk(air uint32) *SubChunk {
 // a single one that is completely filled with air.
 func (sub *SubChunk) Empty() bool {
 	return len(sub.storages) == 0 || (len(sub.storages) == 1 && len(sub.storages[0].palette.values) == 1 && sub.storages[0].palette.values[0] == sub.air)
+}
+
+// Equals returns if the sub chunk passed is equal to the current one.
+func (sub *SubChunk) Equals(s *SubChunk) bool {
+	if s.air != sub.air {
+		return false
+	}
+
+	if !slices.Equal(s.blockLight, sub.blockLight) {
+		return false
+	}
+
+	if !slices.Equal(s.skyLight, sub.skyLight) {
+		return false
+	}
+
+	if len(s.storages) != len(sub.storages) {
+		return false
+	}
+
+	for i := 0; i < len(s.storages); i++ {
+		s1 := s.storages[i]
+		s2 := sub.storages[i]
+
+		if !s1.Equal(s2) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Layer returns a certain block storage/layer from a sub chunk. If no storage at the layer exists, the layer

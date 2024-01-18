@@ -15,7 +15,7 @@ require (
 	github.com/sandertv/gophertunnel v1.34.1
 	github.com/segmentio/fasthash v1.0.3
 	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
+	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3
 	golang.org/x/text v0.14.0
 )
 
