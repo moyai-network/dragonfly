@@ -150,6 +150,12 @@ func (s *Session) sendInv(inv *inventory.Inventory, windowID uint32) {
 
 // sendItem sends the item stack passed to the client with the window ID and slot passed.
 func (s *Session) sendItem(item item.Stack, slot int, windowID uint32) {
+	if s.inTransaction.Load() {
+		queue := s.transactionQueue.Load()
+		queue[[2]int{slot, int(windowID)}] = item
+		s.transactionQueue.Store(queue)
+		return
+	}
 	s.writePacket(&packet.InventorySlot{
 		WindowID: windowID,
 		Slot:     uint32(slot),
@@ -597,9 +603,7 @@ func (s *Session) HandleInventories() (inv, offHand, enderChest *inventory.Inven
 				viewer.ViewEntityItems(s.c)
 			}
 		}
-		if !s.inTransaction.Load() {
-			s.sendItem(item, slot, protocol.WindowIDInventory)
-		}
+		s.sendItem(item, slot, protocol.WindowIDInventory)
 	})
 	s.offHand = inventory.New(1, func(slot int, _, item item.Stack) {
 		if s.c == nil {
@@ -632,9 +636,7 @@ func (s *Session) HandleInventories() (inv, offHand, enderChest *inventory.Inven
 		if s.c == nil {
 			return
 		}
-		if !s.inTransaction.Load() {
-			s.sendItem(after, slot, protocol.WindowIDArmour)
-		}
+		s.sendItem(after, slot, protocol.WindowIDArmour)
 		if before.Comparable(after) && before.Empty() == after.Empty() {
 			// Only send armour if the item type actually changed.
 			return

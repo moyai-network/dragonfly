@@ -1158,17 +1158,12 @@ func (s *Session) ViewSlotChange(slot int, newItem item.Stack) {
 	if !s.containerOpened.Load() {
 		return
 	}
-	if s.inTransaction.Load() {
-		queue := s.transactionQueue.Load()
-		queue[slot] = newItem
-		s.transactionQueue.Store(queue)
-		return
-	}
-	s.writePacket(&packet.InventorySlot{
-		WindowID: s.openedWindowID.Load(),
-		Slot:     uint32(slot),
-		NewItem:  instanceFromItem(newItem),
-	})
+	s.sendItem(newItem, slot, s.openedWindowID.Load())
+	// s.writePacket(&packet.InventorySlot{
+	// 	WindowID: s.openedWindowID.Load(),
+	// 	Slot:     uint32(slot),
+	// 	NewItem:  instanceFromItem(newItem),
+	// })
 }
 
 // ViewBlockAction ...

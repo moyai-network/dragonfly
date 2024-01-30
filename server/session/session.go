@@ -67,7 +67,7 @@ type Session struct {
 	breakingPos cube.Pos
 
 	inTransaction, containerOpened  atomic.Bool
-	transactionQueue atomic.Value[map[int]item.Stack]
+	transactionQueue atomic.Value[map[[2]int]item.Stack]
 	openedWindowID                  atomic.Uint32
 	openedContainerID               atomic.Uint32
 	openedWindow, fakeInventoryOpen atomic.Value[*inventory.Inventory]
@@ -158,7 +158,7 @@ func New(conn Conn, maxChunkRadius int, log Logger, joinMessage, quitMessage str
 		entities:               map[uint64]world.Entity{},
 		hiddenEntities:         map[world.Entity]struct{}{},
 		blobs:                  map[uint64][]byte{},
-		transactionQueue: *atomic.NewValue(map[int]item.Stack{}),
+		transactionQueue: *atomic.NewValue(map[[2]int]item.Stack{}),
 		chunkRadius:            int32(r),
 		maxChunkRadius:         int32(maxChunkRadius),
 		conn:                   conn,
@@ -235,10 +235,10 @@ func (s *Session) Close() error {
 func (s *Session) doTransactionQueue() {
 	s.inTransaction.Store(false)
 	for k, v := range s.transactionQueue.Load() {
-		s.ViewSlotChange(k, v)
+		s.sendItem(v, k[0], uint32(k[1]))
 	}
 
-	s.transactionQueue.Store(make(map[int]item.Stack))
+	s.transactionQueue.Store(make(map[[2]int]item.Stack))
 }
 
 // close closes the session, which in turn closes the controllable and the connection that the session
