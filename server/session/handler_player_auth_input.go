@@ -2,12 +2,13 @@ package session
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/df-mc/dragonfly/server/block/cube"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math"
 )
 
 // PlayerAuthInputHandler handles the PlayerAuthInput packet.
@@ -80,7 +81,7 @@ func (h PlayerAuthInputHandler) handleActions(pk *packet.PlayerAuthInput, s *Ses
 
 	if pk.InputData&packet.InputFlagPerformItemStackRequest != 0 {
 		s.inTransaction.Store(true)
-		defer s.inTransaction.Store(false)
+		defer s.doTransactionQueue()
 
 		// As of 1.18 this is now used for sending item stack requests such as when mining a block.
 		sh := s.handlers[packet.IDItemStackRequest].(*ItemStackRequestHandler)

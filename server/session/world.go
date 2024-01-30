@@ -1159,7 +1159,9 @@ func (s *Session) ViewSlotChange(slot int, newItem item.Stack) {
 		return
 	}
 	if s.inTransaction.Load() {
-		// Don't send slot changes to the player itself.
+		queue := s.transactionQueue.Load()
+		queue[slot] = newItem
+		s.transactionQueue.Store(queue)
 		return
 	}
 	s.writePacket(&packet.InventorySlot{

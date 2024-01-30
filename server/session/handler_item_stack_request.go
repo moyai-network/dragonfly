@@ -2,6 +2,10 @@ package session
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
+	"time"
+
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/entity"
 	"github.com/df-mc/dragonfly/server/event"
@@ -10,9 +14,6 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math"
-	"math/rand"
-	"time"
 )
 
 // ItemStackRequestHandler handles the ItemStackRequest packet. It handles the actions done within the
@@ -49,7 +50,7 @@ func (h *ItemStackRequestHandler) Handle(p packet.Packet, s *Session) error {
 	h.current = time.Now()
 
 	s.inTransaction.Store(true)
-	defer s.inTransaction.Store(false)
+	defer s.doTransactionQueue()
 
 	for _, req := range pk.Requests {
 		if err := h.handleRequest(req, s); err != nil {
