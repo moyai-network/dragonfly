@@ -3,6 +3,11 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"net"
+	"time"
+	_ "unsafe" // Imported for compiler directives.
+
 	"github.com/df-mc/atomic"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/entity"
@@ -19,10 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
-	"math"
-	"net"
-	"time"
-	_ "unsafe" // Imported for compiler directives.
 )
 
 // StopShowingEntity stops showing a world.Entity to the Session. It will be completely invisible until a call to
@@ -170,9 +171,29 @@ type smelter interface {
 	ResetExperience() int
 }
 
+
+const (
+	containerAnvilInput    = 0
+	containerAnvilMaterial = 1
+	containerArmour        = 6
+	containerChest         = 7
+	containerBeacon        = 8
+	containerFullInventory = 12
+	containerCraftingGrid  = 13
+	containerHotbar        = 27
+	containerInventory     = 28
+	containerOffHand       = 33
+	containerBarrel        = 57
+	containerCursor        = 58
+	containerOutput        = 59
+)
+
 // invByID attempts to return an inventory by the ID passed. If found, the inventory is returned and the bool
 // returned is true.
 func (s *Session) invByID(id int32) (*inventory.Inventory, bool) {
+	if fakeInv := s.fakeInventoryOpen.Load(); fakeInv != nil && int32(s.openedContainerID.Load()) == id {
+		return fakeInv, true
+	}
 	switch id {
 	case protocol.ContainerCraftingInput, protocol.ContainerCreatedOutput, protocol.ContainerCursor:
 		// UI inventory.

@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/df-mc/atomic"
 	"github.com/df-mc/dragonfly/server/block"
 	"github.com/df-mc/dragonfly/server/block/cube"
@@ -21,10 +26,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/protocol/login"
 	"github.com/sandertv/gophertunnel/minecraft/protocol/packet"
 	"github.com/sandertv/gophertunnel/minecraft/text"
-	"io"
-	"net"
-	"sync"
-	"time"
 )
 
 // Session handles incoming packets from connections and sends outgoing packets by providing a thin layer
@@ -65,12 +66,12 @@ type Session struct {
 
 	breakingPos cube.Pos
 
-	inTransaction, containerOpened atomic.Bool
-	openedWindowID                 atomic.Uint32
-	openedContainerID              atomic.Uint32
-	openedWindow                   atomic.Value[*inventory.Inventory]
-	openedPos                      atomic.Value[cube.Pos]
-	swingingArm                    atomic.Bool
+	inTransaction, containerOpened  atomic.Bool
+	openedWindowID                  atomic.Uint32
+	openedContainerID               atomic.Uint32
+	openedWindow, fakeInventoryOpen atomic.Value[*inventory.Inventory]
+	openedPos                       atomic.Value[cube.Pos]
+	swingingArm                     atomic.Bool
 
 	recipes map[uint32]recipe.Recipe
 

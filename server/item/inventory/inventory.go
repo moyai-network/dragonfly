@@ -3,11 +3,23 @@ package inventory
 import (
 	"errors"
 	"fmt"
-	"github.com/df-mc/dragonfly/server/item"
 	"math"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/df-mc/dragonfly/server/item"
+)
+
+const (
+	// HopperSize is a constant representing the size of a hopper inventory.
+	HopperSize = 5
+	// DispenserSize is a constant representing the size of a dispenser inventory.
+	DispenserSize = 9
+	// ChestSize is a constant representing the size of a chest inventory.
+	ChestSize = 27
+	// DoubleChestSize is a constant representing the size of a double chest inventory.
+	DoubleChestSize = 54
 )
 
 // Inventory represents an inventory containing items. These inventories may be carried by entities or may be
