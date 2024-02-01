@@ -2560,7 +2560,7 @@ func (p *Player) OnGround() bool {
 }
 
 func (p *Player) ShowInventory(name string, inv *inventory.Inventory) {
-	p.session().ShowInventory(name, inv)
+	p.session().ViewInventory(name, inv)
 }
 
 // EyeHeight returns the eye height of the player: 1.62, or 0.52 if the player is swimming.

@@ -1039,16 +1039,46 @@ func (s *Session) ViewInventory(name string, inv *inventory.Inventory) {
 	s.ViewBlockUpdate(pos, b, 0)
 	s.ViewBlockUpdate(pos.Add(cube.Pos{0, 1}), block.Air{}, 0)
 
+	if inv.Size() == 54 {
+		ch := b.(block.Chest)
+		switch ch.Facing {
+			case cube.North, cube.South:
+				newPos := pos.Add(cube.Pos{-1})
+				s.ViewBlockUpdate(newPos, b, 0)
+				s.ViewBlockUpdate(pos.Add(cube.Pos{-1, 1}), block.Air{}, 0)
+				_, _, ok := ch.Pair(s.c.World(), pos, newPos)
+				if !ok {
+					fmt.Println("LOL?")
+				}
+			case cube.East, cube.West:
+				newPos := pos.Add(cube.Pos{0, 0, -1})
+				s.ViewBlockUpdate(pos.Add(cube.Pos{0, 0, -1}), b, 0)
+				s.ViewBlockUpdate(pos.Add(cube.Pos{0, 1, -1}), block.Air{}, 0)
+				_, _, ok := ch.Pair(s.c.World(), pos, newPos)
+				if !ok {
+					fmt.Println("LOL2?")
+				}
+		}
+	}
+
 	blockPos := blockPosToProtocol(pos)
+	data := map[string]interface{}{
+		"CustomName": name,
+		"id":         id,
+		"x":          blockPos.X(),
+		"y":          blockPos.Y(),
+		"z":          blockPos.Z(),
+	}
+
+	if inv.Size() == 54 {
+		ch := b.(block.Chest)
+		d := ch.EncodeNBT()
+		data["pairX"] = d["pairX"]
+		data["pairZ"] = d["pairZ"]
+	}
 	s.writePacket(&packet.BlockActorData{
 		Position: blockPos,
-		NBTData: map[string]interface{}{
-			"CustomName": name,
-			"id":         id,
-			"x":          blockPos.X(),
-			"y":          blockPos.Y(),
-			"z":          blockPos.Z(),
-		},
+		NBTData: data,
 	})
 
 	time.AfterFunc(time.Millisecond*50, func() {
@@ -1089,6 +1119,10 @@ func (s *Session) ShowInventory(name string, inv *inventory.Inventory) {
 
 	blockPos := blockPosToProtocol(pos)
 	data := createFakeInventoryNBT(name, inv, pos)
+	if inv.Size() == 54 {
+		data["x"], data["y"], data["z"] = blockPos.X(), blockPos.Y(), blockPos.Z()
+
+	}
 	data["x"], data["y"], data["z"] = blockPos.X(), blockPos.Y(), blockPos.Z()
 	s.writePacket(&packet.BlockActorData{
 		Position: blockPos,
@@ -1110,6 +1144,10 @@ func (s *Session) ShowInventory(name string, inv *inventory.Inventory) {
 		})
 		s.sendInv(inv, uint32(nextID))
 	})
+}
+
+func (s *Session) CloseInventory() {
+	s.ViewBlockUpdate(s.openedPos.Load(), block.Air{}, 0)
 }
 
 func createFakeInventoryNBT(name string, inv *inventory.Inventory, pos cube.Pos) map[string]interface{} {
